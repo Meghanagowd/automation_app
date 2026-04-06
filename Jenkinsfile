@@ -2,17 +2,14 @@ pipeline {
     agent any
 
     environment {
-        // 1. Updated to your exact Docker Hub username
         DOCKER_USER = "meghanagowda282005"
-        
-        // 2. This must match the ID you created in Jenkins Credentials
-        REGISTRY_CREDENTIALS = 'docker-hub-creds'
-        
+        REGISTRY_CREDENTIALS = 'python_app_password'
         IMAGE_NAME = "my_meg_app"
         CONTAINER_NAME = "my_meg_container"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 echo '📥 Pulling code from GitHub...'
@@ -20,10 +17,9 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
                 echo '🔨 Building Docker Image...'
-                // Tags the image correctly for your account
                 sh "docker build -t ${DOCKER_USER}/${IMAGE_NAME}:latest ."
             }
         }
@@ -38,8 +34,7 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    // This uses the 'docker-hub-creds' from your Jenkins Credentials vault
-                    docker.withRegistry('', "${REGISTRY_CREDENTIALS}") {
+                    docker.withRegistry('https://index.docker.io/v1/', "${REGISTRY_CREDENTIALS}") {
                         echo '📤 Pushing Image to Docker Hub...'
                         sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:latest"
                     }
@@ -47,7 +42,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Local') {
+        stage('Deploy Local Container') {
             steps {
                 echo '🚀 Refreshing Local Container...'
                 sh "docker stop ${CONTAINER_NAME} || true"
@@ -59,10 +54,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Success! Your image is on Docker Hub and running locally.'
+            echo '✅ Success! Image pushed & container running locally.'
         }
         failure {
-            echo '❌ Pipeline Failed. Check the Console Output for login or naming errors.'
+            echo '❌ Pipeline Failed. Check logs (Docker login / build / push errors).'
         }
     }
 }
